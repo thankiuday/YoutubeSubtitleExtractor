@@ -3,14 +3,13 @@ services:
     name: youtube-subtitle-extractor
     env: node
     buildCommand: |
-      npm install
+      npm install        # install frontend deps
+      npm run build      # build frontend (React, Vite, etc.)
       cd server
-      npm install
-      cd ..
-      npm run build
+      npm install        # install backend deps
     startCommand: cd server && npm start
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: 3001 
+        value: 3001
