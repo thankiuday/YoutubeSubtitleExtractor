@@ -1,177 +1,111 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
+import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
+import Home from './components/Home';
+import AboutUs from './components/AboutUs';
+import ContactUs from './components/ContactUs';
+import Footer from './components/Footer';
+import LearningHub from './components/LearningHub';
 import './App.css';
 
-const PROXY_URL = 'http://localhost:3001';
+const PROXY_URL = process.env.NODE_ENV === 'production' 
+  ? window.location.origin 
+  : 'http://localhost:3001';
 const MAX_RETRIES = 3;
-const RETRY_DELAY = 1000;
+const RETRY_DELAY = 500;
 
 const languages = [
   { code: 'en', name: 'English', available: true },
-  { code: 'hi', name: 'Hindi (Coming Soon)', available: false },
-  { code: 'es', name: 'Spanish (Coming Soon)', available: false },
-  { code: 'fr', name: 'French (Coming Soon)', available: false },
-  { code: 'de', name: 'German (Coming Soon)', available: false },
-  { code: 'it', name: 'Italian (Coming Soon)', available: false },
-  { code: 'pt', name: 'Portuguese (Coming Soon)', available: false },
-  { code: 'ru', name: 'Russian (Coming Soon)', available: false },
-  { code: 'ja', name: 'Japanese (Coming Soon)', available: false },
-  { code: 'ko', name: 'Korean (Coming Soon)', available: false },
-  { code: 'zh', name: 'Chinese (Coming Soon)', available: false }
+  { code: 'hi', name: 'Hindi', available: true },
+  { code: 'es', name: 'Spanish', available: true },
+  { code: 'fr', name: 'French', available: true },
+  { code: 'de', name: 'German', available: true },
+  { code: 'it', name: 'Italian', available: true },
+  { code: 'pt', name: 'Portuguese', available: true },
+  { code: 'ru', name: 'Russian', available: true },
+  { code: 'ja', name: 'Japanese', available: true },
+  { code: 'ko', name: 'Korean', available: true },
+  { code: 'zh', name: 'Chinese', available: true }
 ];
 
-function App() {
-  const [url, setUrl] = useState('');
-  const [videoId, setVideoId] = useState('');
-  const [selectedLanguage, setSelectedLanguage] = useState('en');
-  const [subtitles, setSubtitles] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [retryCount, setRetryCount] = useState(0);
+function Navigation() {
+  const location = useLocation();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  const fetchWithRetry = async (url, options = {}, retries = MAX_RETRIES) => {
-    try {
-      const response = await fetch(url, options);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      return await response.json();
-    } catch (error) {
-      if (retries > 0) {
-        console.log(`Retrying... ${retries} attempts left`);
-        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
-        return fetchWithRetry(url, options, retries - 1);
-      }
-      throw error;
-    }
-  };
-
-  const extractVideoId = (url) => {
-    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
-    const match = url.match(regExp);
-    return (match && match[2].length === 11) ? match[2] : null;
-  };
-
-  const fetchSubtitles = async () => {
-    setLoading(true);
-    setError('');
-    setSubtitles([]);
-    setRetryCount(0);
-
-    try {
-      const id = extractVideoId(url);
-      if (!id) {
-        throw new Error('Invalid YouTube URL');
-      }
-      setVideoId(id);
-      console.log('Video ID:', id);
-      console.log('Selected language:', selectedLanguage);
-
-      // First check if video exists and get available caption tracks
-      console.log('Fetching caption tracks:', `${PROXY_URL}/api/subtitles/list?videoId=${id}`);
-      const tracks = await fetchWithRetry(`${PROXY_URL}/api/subtitles/list?videoId=${id}`);
-      console.log('Available tracks:', tracks);
-
-      if (!tracks || tracks.length === 0) {
-        throw new Error('No captions available for this video');
-      }
-
-      // Find the selected language track or fallback to first available
-      const track = tracks.find(t => t.languageCode === selectedLanguage) || tracks[0];
-      console.log('Fetching subtitles for track:', track);
-
-      // Fetch the actual subtitles
-      const response = await fetchWithRetry(
-        `${PROXY_URL}/api/subtitles/fetch?videoId=${id}&trackId=${track.languageCode}`
-      );
-      console.log('Received subtitles data:', response);
-
-      if (!response.subtitles || response.subtitles.length === 0) {
-        throw new Error('No subtitle content found');
-      }
-
-      setSubtitles(response.subtitles);
-    } catch (error) {
-      console.error('Error:', error);
-      setError(error.message);
-    } finally {
-      setLoading(false);
-    }
+  const isActive = (path) => {
+    return location.pathname === path ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600';
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 py-6 flex flex-col justify-center sm:py-12">
-      <div className="relative py-3 sm:max-w-xl sm:mx-auto">
-        <div className="relative px-4 py-10 bg-white shadow-lg sm:rounded-3xl sm:p-20">
-          <div className="max-w-md mx-auto">
-            <div className="divide-y divide-gray-200">
-              <div className="py-8 text-base leading-6 space-y-4 text-gray-700 sm:text-lg sm:leading-7">
-                <h1 className="text-3xl font-bold text-center mb-8">YouTube Subtitle Extractor</h1>
-                
-                <div className="mb-4">
-                  <input
-                    type="text"
-                    value={url}
-                    onChange={(e) => setUrl(e.target.value)}
-                    placeholder="Enter YouTube URL"
-                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
+    <nav className="bg-white shadow-lg">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between h-16">
+          <div className="flex items-center">
+            <Link to="/" className="text-xl font-extrabold text-blue-600">YouTube Subtitle Extractor</Link>
+          </div>
+          
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex items-center space-x-4">
+            <Link to="/" className={`px-3 py-2 rounded-md text-sm font-bold ${isActive('/')}`}>Home</Link>
+            <Link to="/learning" className={`px-3 py-2 rounded-md text-sm font-bold ${isActive('/learning')}`}>Learning Hub</Link>
+            <Link to="/about" className={`px-3 py-2 rounded-md text-sm font-bold ${isActive('/about')}`}>About Us</Link>
+            <Link to="/contact" className={`px-3 py-2 rounded-md text-sm font-bold ${isActive('/contact')}`}>Contact Us</Link>
+          </div>
 
-                <div className="mb-4">
-                  <select
-                    value={selectedLanguage}
-                    onChange={(e) => setSelectedLanguage(e.target.value)}
-                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    {languages.map(lang => (
-                      <option 
-                        key={lang.code} 
-                        value={lang.code}
-                        disabled={!lang.available}
-                        className={!lang.available ? 'text-gray-400' : ''}
-                      >
-                        {lang.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <button
-                  onClick={fetchSubtitles}
-                  disabled={loading || !url}
-                  className={`w-full py-2 px-4 rounded-lg text-white font-semibold ${
-                    loading || !url
-                      ? 'bg-gray-400 cursor-not-allowed'
-                      : 'bg-blue-500 hover:bg-blue-600'
-                  }`}
-                >
-                  {loading ? 'Loading...' : 'Extract Subtitles'}
-                </button>
-
-                {error && (
-                  <div className="mt-4 p-4 bg-red-100 text-red-700 rounded-lg">
-                    {error}
-                  </div>
+          {/* Mobile menu button */}
+          <div className="md:hidden flex items-center">
+            <button
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="inline-flex items-center justify-center p-2 rounded-md text-gray-700 hover:text-blue-600 focus:outline-none"
+            >
+              <svg
+                className="h-6 w-6"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                {isMenuOpen ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                 )}
-
-                {subtitles.length > 0 && (
-                  <div className="mt-8">
-                    <h2 className="text-xl font-semibold mb-4">Subtitles:</h2>
-                    <div className="bg-gray-50 p-4 rounded-lg max-h-96 overflow-y-auto">
-                      {subtitles.map((subtitle, index) => (
-                        <p key={index} className="mb-2">
-                          {subtitle.text}
-                        </p>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
+              </svg>
+            </button>
           </div>
         </div>
+
+        {/* Mobile menu */}
+        {isMenuOpen && (
+          <div className="md:hidden">
+            <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+              <Link to="/" className={`block px-3 py-2 rounded-md text-base font-bold ${isActive('/')}`}>Home</Link>
+              <Link to="/learning" className={`block px-3 py-2 rounded-md text-base font-bold ${isActive('/learning')}`}>Learning Hub</Link>
+              <Link to="/about" className={`block px-3 py-2 rounded-md text-base font-bold ${isActive('/about')}`}>About Us</Link>
+              <Link to="/contact" className={`block px-3 py-2 rounded-md text-base font-bold ${isActive('/contact')}`}>Contact Us</Link>
+            </div>
+          </div>
+        )}
       </div>
-    </div>
+    </nav>
+  );
+}
+
+function App() {
+  return (
+    <Router>
+      <div className="min-h-screen bg-gray-100 flex flex-col">
+        <Navigation />
+        <main className="flex-grow">
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/learning" element={<LearningHub />} />
+            <Route path="/about" element={<AboutUs />} />
+            <Route path="/contact" element={<ContactUs />} />
+          </Routes>
+        </main>
+        <Footer />
+      </div>
+    </Router>
   );
 }
 
