@@ -10,11 +10,6 @@ const port = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
-// Serve static files from the React app in production
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../build')));
-}
-
 // Enhanced cache system
 const cache = {
   tracks: new Map(),
@@ -72,12 +67,6 @@ const cache = {
 
 // Start cache cleanup interval
 setInterval(() => cache.cleanup(), cache.cleanupInterval);
-
-// Add error handling middleware
-app.use((err, req, res, next) => {
-  console.error('Server error:', err);
-  res.status(500).json({ error: 'Internal server error: ' + err.message });
-});
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -176,8 +165,18 @@ async function verifyTranscriptLanguage(transcript, requestedLang) {
   return matches.length >= 2;
 }
 
-// Add this at the end of your routes
+// Add error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Server error:', err);
+  res.status(500).json({ error: 'Internal server error: ' + err.message });
+});
+
+// Serve static files from the React app in production
 if (process.env.NODE_ENV === 'production') {
+  // Serve static files
+  app.use(express.static(path.join(__dirname, '../build')));
+  
+  // Handle React routing, return all requests to React app
   app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, '../build', 'index.html'));
   });
