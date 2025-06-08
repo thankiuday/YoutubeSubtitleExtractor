@@ -2,7 +2,12 @@ services:
   - type: web
     name: youtube-subtitle-extractor
     env: node
-    buildCommand: cd server && npm install && cd ../client && npm install && npm run build
+    buildCommand: |
+      cd server
+      npm install
+      cd ..
+      npm install
+      npm run build
     startCommand: cd server && npm start
     envVars:
       - key: NODE_ENV
