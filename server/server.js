@@ -177,10 +177,20 @@ if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, '../build')));
   
   // Handle React routing, return all requests to React app
-  app.get('*', (req, res) => {
+  app.get('*', (req, res, next) => {
+    // Check if the request is for an API endpoint
+    if (req.path.startsWith('/api/')) {
+      return res.status(404).json({ error: 'API endpoint not found' });
+    }
+    // For non-API requests, serve the React app
     res.sendFile(path.join(__dirname, '../build', 'index.html'));
   });
 }
+
+// 404 handler for API routes
+app.use('/api/*', (req, res) => {
+  res.status(404).json({ error: 'API endpoint not found' });
+});
 
 app.listen(port, () => {
   console.log(`Proxy server running on port ${port}`);

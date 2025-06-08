@@ -43,11 +43,25 @@ function Home() {
   const fetchWithRetry = async (url, options = {}, retries = MAX_RETRIES) => {
     try {
       const response = await fetch(url, options);
+      const contentType = response.headers.get('content-type');
+      
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || getErrorMessage(response.status));
+        // Check if the response is JSON
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || getErrorMessage(response.status));
+        } else {
+          // If not JSON, use the status text or a default message
+          throw new Error(response.statusText || getErrorMessage(response.status));
+        }
       }
-      return await response.json();
+      
+      // Check if the response is JSON before trying to parse it
+      if (contentType && contentType.includes('application/json')) {
+        return await response.json();
+      } else {
+        throw new Error('Invalid response format from server');
+      }
     } catch (error) {
       if (retries > 0) {
         console.log(`Retrying... ${retries} attempts left`);
@@ -63,7 +77,7 @@ function Home() {
       case 400:
         return 'Invalid request. Please check your input.';
       case 404:
-        return 'No captions found for this video. Please try another video.';
+        return 'API endpoint not found. Please try again later.';
       case 500:
         return 'Server error. Please try again later.';
       default:
