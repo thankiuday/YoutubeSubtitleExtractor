@@ -1,7 +1,9 @@
 import React, { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 
-const PROXY_URL = 'http://localhost:3001';
+const PROXY_URL = process.env.NODE_ENV === 'production' 
+  ? window.location.origin 
+  : 'http://localhost:3001';
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 500;
 
